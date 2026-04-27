@@ -1,8 +1,7 @@
 {
   "name": "tic-tac-toe-game",
   "version": "1.0.0",
-  "description": "CP01-world: Basic App Setup / Hello world
-CP02-accounts: Register and Login working",
+  "description": "CP01-world: Basic App Setup / Hello world. CP02-accounts: Register and Login working.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
