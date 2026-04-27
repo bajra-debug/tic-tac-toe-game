@@ -1,66 +1,71 @@
-const express = require("express");
-const session = require("express-session");
-const fs = require("fs");
-const path = require("path");
+const express = require('express');
+const path = require('path');
+const session = require('express-session');
+const bcrypt = require('bcryptjs');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
-app.use(express.static("public"));
+// Middleware
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(session({
+  secret: 'your-secret-key',
+  resave: false,
+  saveUninitialized: true,
+}));
 
-app.use(
-    session({
-        secret: "tic-tac-toe-secret",
-        resave: false,
-        saveUninitialized: false,
-    }),
-);
+// Mock database
+const users = [];
 
-const usersFilePath = path.join(__dirname, "data", "users.json");
-
-// --- CP01: Hello World Route ---
-app.get("/api/hello", (req, res) => {
-    res.json({ message: "Hello World!" });
+// Routes
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'cp01-world', 'index.html'));
 });
 
-// --- CP02: Auth Routes ---
-app.post("/api/register", (req, res) => {
-    const { username, password } = req.body;
-    const usersData = fs.readFileSync(usersFilePath, "utf8");
-    const users = JSON.parse(usersData);
-
-    if (users.find((u) => u.username === username)) {
-        return res.status(400).json({ error: "Username already taken" });
-    }
-
-    users.push({ username, password });
-    fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
-    res.json({ message: "Registration successful!" });
+app.get('/cp01-world', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'cp01-world', 'index.html'));
 });
 
-app.post("/api/login", (req, res) => {
-    const { username, password } = req.body;
-    const usersData = fs.readFileSync(usersFilePath, "utf8");
-    const users = JSON.parse(usersData);
-
-    const user = users.find(
-        (u) => u.username === username && u.password === password,
-    );
-    if (user) {
-        req.session.username = username;
-        res.json({ message: "Login successful!" });
-    } else {
-        res.status(401).json({ error: "Invalid credentials" });
-    }
+app.get('/cp02-accounts/register', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'cp02-accounts', 'register.html'));
 });
 
-app.post("/api/logout", (req, res) => {
-    req.session.destroy();
-    res.json({ message: "Logged out successfully" });
+app.post('/cp02-accounts/register', async (req, res) => {
+  const { username, password } = req.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
+  users.push({ username, password: hashedPassword });
+  res.redirect('/cp02-accounts/login');
 });
 
-// Start Server (with 0.0.0.0 for Replit preview)
-app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on port ${PORT}`);
+app.get('/cp02-accounts/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'cp02-accounts', 'login.html'));
+});
+
+app.post('/cp02-accounts/login', async (req, res) => {
+  const { username, password } = req.body;
+  const user = users.find(u => u.username === username);
+  if (user && await bcrypt.compare(password, user.password)) {
+    req.session.user = user;
+    res.redirect('/cp02-accounts/dashboard');
+  } else {
+    res.redirect('/cp02-accounts/login?error=1');
+  }
+});
+
+app.get('/cp02-accounts/dashboard', (req, res) => {
+  if (!req.session.user) {
+    return res.redirect('/cp02-accounts/login');
+  }
+  res.send(`<h1>Welcome, ${req.session.user.username}!</h1><a href="/cp02-accounts/logout">Logout</a>`);
+});
+
+app.get('/cp02-accounts/logout', (req, res) => {
+  req.session.destroy();
+  res.redirect('/');
+});
+
+// Start server
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on http://localhost:${PORT}`);
 });
