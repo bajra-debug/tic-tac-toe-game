@@ -78,4 +78,35 @@ function restartGame() {
     statusText.textContent = `Player ${currentPlayer}'s Turn`;
     cells.forEach(cell => cell.textContent = "");
     running = true;
+}// --- NEW CP05 SAVE GAME LOGIC ---
+const saveBtn = document.querySelector('#save-btn');
+saveBtn.addEventListener('click', saveGame);
+
+async function saveGame() {
+    // 1. Package up the current game data
+    const gameData = {
+        board: options,
+        currentPlayer: currentPlayer,
+        gameActive: running
+    };
+
+    // 2. Send it to the server
+    try {
+        const response = await fetch('/api/save-game', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(gameData)
+        });
+
+        if (response.ok) {
+            alert("Game saved successfully!");
+        } else {
+            alert("Failed to save the game.");
+        }
+    } catch (error) {
+        console.error("Error saving game:", error);
+        alert("Server error while saving.");
+    }
 }
